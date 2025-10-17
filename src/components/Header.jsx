@@ -23,11 +23,12 @@ export default function Header() {
                 <div className="flex items-center justify-between h-16">
                     <Link to="/" className="flex items-center space-x-2">
                         <div className="w-8 h-8 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg" />
-                        <span className="text-xl font-bold text-gray-900">NextLevel</span>
+                        <span className="text-xl font-bold text-gray-900 hidden sm:inline">NextLevel</span>
                     </Link>
 
-                    <form onSubmit={handleSearch} className="flex-1 max-w-lg mx-8">
-                        <div className="relative">
+                    {/* Десктоп поиск */}
+                    <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-lg mx-8">
+                        <div className="relative w-full">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                             <input
                                 type="text"
@@ -39,7 +40,16 @@ export default function Header() {
                         </div>
                     </form>
 
-                    <div className="flex items-center space-x-4">
+                    {/* Мобильный поиск - иконка */}
+                    <button
+                        onClick={() => navigate('/search')}
+                        className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        aria-label="Поиск"
+                    >
+                        <Search className="w-5 h-5 text-gray-600" />
+                    </button>
+
+                    <div className="flex items-center space-x-2 md:space-x-4">
                         <Button variant="ghost" size="sm">
                             <Plus className="w-5 h-5 mr-1" />
                             Создать

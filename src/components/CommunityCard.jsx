@@ -37,9 +37,11 @@ export default function CommunityCard({ community, joined = false }) {
             </div>
 
             {joined ? (
-                <Button variant="outline" size="sm" className="w-full">
-                    Открыть
-                </Button>
+                <Link to={`/community/${community.id}`} className="block">
+                    <Button variant="outline" size="sm" className="w-full">
+                        Открыть
+                    </Button>
+                </Link>
             ) : (
                 <Button size="sm" className="w-full">
                     Присоединиться

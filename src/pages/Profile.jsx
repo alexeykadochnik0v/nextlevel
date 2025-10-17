@@ -1,27 +1,136 @@
+import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { MapPin, Mail, Calendar, Award, ExternalLink } from 'lucide-react'
+import { MapPin, Mail, Calendar, Award, ExternalLink, Edit2 } from 'lucide-react'
+import { doc, getDoc, updateDoc } from 'firebase/firestore'
+import { db } from '../lib/firebase'
+import { useAuth } from '../hooks/useAuth'
 import Header from '../components/Header'
 import Card from '../components/ui/Card'
 import Avatar from '../components/ui/Avatar'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
+import Input from '../components/ui/Input'
+import Textarea from '../components/ui/Textarea'
+import Modal from '../components/ui/Modal'
+import Toast from '../components/Toast'
 import ProgressBar from '../components/ProgressBar'
 
 export default function Profile() {
     const { id } = useParams()
+    const { user: currentUser } = useAuth()
+    const [profileUser, setProfileUser] = useState(null)
+    const [loading, setLoading] = useState(true)
+    const [isEditing, setIsEditing] = useState(false)
+    const [saving, setSaving] = useState(false)
+    const [showToast, setShowToast] = useState(false)
+    const [toastMessage, setToastMessage] = useState('')
+    const [editForm, setEditForm] = useState({
+        displayName: '',
+        bio: '',
+        location: '',
+        birthDate: ''
+    })
 
-    // Моковые данные
+    const isOwnProfile = currentUser && currentUser.uid === id
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const userDoc = await getDoc(doc(db, 'users', id))
+                if (userDoc.exists()) {
+                    const data = userDoc.data()
+                    setProfileUser({ uid: id, ...data })
+                    setEditForm({
+                        displayName: data.displayName || '',
+                        bio: data.bio || '',
+                        location: data.location || '',
+                        birthDate: data.birthDate || ''
+                    })
+                }
+            } catch (error) {
+                console.error('Error fetching profile:', error)
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        fetchProfile()
+    }, [id])
+
+    const handleEditChange = (e) => {
+        const { name, value } = e.target
+        setEditForm(prev => ({ ...prev, [name]: value }))
+    }
+
+    const handleSaveProfile = async () => {
+        if (!editForm.displayName.trim()) {
+            setToastMessage('ФИО обязательно для заполнения')
+            setShowToast(true)
+            return
+        }
+
+        setSaving(true)
+        try {
+            await updateDoc(doc(db, 'users', id), {
+                displayName: editForm.displayName.trim(),
+                bio: editForm.bio.trim(),
+                location: editForm.location.trim(),
+                birthDate: editForm.birthDate,
+                updatedAt: new Date().toISOString()
+            })
+
+            setProfileUser(prev => ({
+                ...prev,
+                ...editForm
+            }))
+
+            setIsEditing(false)
+            setToastMessage('Профиль успешно обновлен!')
+            setShowToast(true)
+        } catch (error) {
+            console.error('Error updating profile:', error)
+            setToastMessage('Ошибка при сохранении профиля')
+            setShowToast(true)
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-50">
+                <Header />
+                <div className="flex items-center justify-center h-96">
+                    <div className="text-gray-500">Загрузка профиля...</div>
+                </div>
+            </div>
+        )
+    }
+
+    if (!profileUser) {
+        return (
+            <div className="min-h-screen bg-gray-50">
+                <Header />
+                <div className="flex items-center justify-center h-96">
+                    <div className="text-gray-500">Пользователь не найден</div>
+                </div>
+            </div>
+        )
+    }
+
     const user = {
         id,
-        displayName: 'Иван Иванов',
-        role: 'user',
-        email: 'ivan@example.com',
-        bio: 'Frontend разработчик, увлекаюсь React и современными веб-технологиями. Ищу интересные проекты и стажировки.',
-        location: 'Москва, Россия',
-        joinDate: '2024-01-15',
-        level: 7,
-        points: 2450,
-        pointsToNextLevel: 500
+        displayName: profileUser.displayName || 'Пользователь',
+        role: profileUser.role || 'user',
+        email: profileUser.email || '',
+        bio: profileUser.bio || '',
+        location: profileUser.location || '',
+        birthDate: profileUser.birthDate || '',
+        joinDate: profileUser.createdAt || new Date().toISOString(),
+        level: profileUser.level || 1,
+        points: profileUser.points || 0,
+        pointsToNextLevel: (profileUser.level || 1) * 1000 - (profileUser.points || 0),
+        photoURL: profileUser.photoURL || null
     }
 
     const skills = [
@@ -127,9 +236,12 @@ export default function Profile() {
                                     </div>
                                 </div>
 
-                                <Button className="w-full">
-                                    Редактировать профиль
-                                </Button>
+                                {isOwnProfile && (
+                                    <Button className="w-full" onClick={() => setIsEditing(true)}>
+                                        <Edit2 className="w-4 h-4 mr-2" />
+                                        Редактировать профиль
+                                    </Button>
+                                )}
                             </div>
                         </Card>
 
@@ -258,6 +370,77 @@ export default function Profile() {
                     </div>
                 </div>
             </div>
+
+            {/* Модальное окно редактирования */}
+            <Modal
+                show={isEditing}
+                onClose={() => setIsEditing(false)}
+                title="Редактировать профиль"
+                size="md"
+            >
+                <div className="space-y-4">
+                    <Input
+                        label="ФИО"
+                        name="displayName"
+                        value={editForm.displayName}
+                        onChange={handleEditChange}
+                        required
+                    />
+
+                    <Input
+                        label="Дата рождения"
+                        type="date"
+                        name="birthDate"
+                        value={editForm.birthDate}
+                        onChange={handleEditChange}
+                    />
+
+                    <Input
+                        label="Местоположение"
+                        name="location"
+                        value={editForm.location}
+                        onChange={handleEditChange}
+                        placeholder="Москва, Россия"
+                    />
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            О себе
+                        </label>
+                        <Textarea
+                            name="bio"
+                            value={editForm.bio}
+                            onChange={handleEditChange}
+                            placeholder="Расскажите о себе, своих интересах и целях..."
+                            rows={4}
+                        />
+                    </div>
+
+                    <div className="flex space-x-3 pt-4">
+                        <Button
+                            onClick={handleSaveProfile}
+                            disabled={saving}
+                            className="flex-1"
+                        >
+                            {saving ? 'Сохранение...' : 'Сохранить'}
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsEditing(false)}
+                            disabled={saving}
+                            className="flex-1"
+                        >
+                            Отмена
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+
+            <Toast
+                message={toastMessage}
+                show={showToast}
+                onClose={() => setShowToast(false)}
+            />
         </div>
     )
 }

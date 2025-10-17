@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, Send, Paperclip, Users, Settings } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
+import useChatsStore from '../store/chatsStore'
 import Header from '../components/Header'
 import Message from '../components/Message'
 import Button from '../components/ui/Button'
@@ -12,6 +13,7 @@ export default function Chat() {
     const { user } = useAuth()
     const [messageText, setMessageText] = useState('')
     const messagesEndRef = useRef(null)
+    const { messages, setMessages, addMessage } = useChatsStore()
 
     // Для демонстрации используем моковые данные
     const mockChat = {
@@ -25,7 +27,7 @@ export default function Chat() {
         membersCount: 234
     }
 
-    const mockMessages = [
+    const initialMockMessages = [
         {
             id: '1',
             text: 'Привет всем! Кто-нибудь работал с React 19?',
@@ -85,17 +87,40 @@ export default function Chat() {
         }
     ]
 
+    // Получаем сообщения для текущего чата
+    const chatMessages = messages[id] || []
+
+    // Загружаем моковые сообщения при первом рендере
+    useEffect(() => {
+        if (chatMessages.length === 0) {
+            setMessages(id, initialMockMessages)
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [id])
+
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
 
     useEffect(() => {
         scrollToBottom()
-    }, [mockMessages])
+    }, [chatMessages])
 
     const handleSend = () => {
-        if (messageText.trim()) {
-            console.log('Отправка сообщения:', messageText)
+        if (messageText.trim() && user) {
+            const newMessage = {
+                id: `msg-${Date.now()}`,
+                text: messageText,
+                author: {
+                    uid: user.uid,
+                    displayName: user.displayName || user.email,
+                    photoURL: user.photoURL || null
+                },
+                createdAt: new Date().toISOString(),
+                attachments: []
+            }
+            
+            addMessage(id, newMessage)
             setMessageText('')
         }
     }
@@ -147,7 +172,7 @@ export default function Chat() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-                    {mockMessages.map(message => (
+                    {chatMessages.map(message => (
                         <Message
                             key={message.id}
                             message={message}

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { useSearchParams, Link } from 'react-router-dom'
 import { Search } from 'lucide-react'
 import Header from '../components/Header'
 import Tabs from '../components/Tabs'
@@ -15,6 +15,14 @@ export default function SearchPage() {
     const query = searchParams.get('q') || ''
     const [activeTab, setActiveTab] = useState('all')
     const [searchText, setSearchText] = useState(query)
+    const searchInputRef = useRef(null)
+
+    // Автофокус на поиске при загрузке страницы
+    useEffect(() => {
+        if (searchInputRef.current) {
+            searchInputRef.current.focus()
+        }
+    }, [])
 
     const tabs = [
         { id: 'all', label: 'Всё' },
@@ -85,12 +93,13 @@ export default function SearchPage() {
                         <div className="flex-1 relative">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                             <input
+                                ref={searchInputRef}
                                 type="text"
                                 value={searchText}
                                 onChange={(e) => setSearchText(e.target.value)}
                                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                                 placeholder="Поиск сообществ, публикаций, пользователей..."
-                                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                className="w-full pl-10 pr-4 py-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                             />
                         </div>
                         <Button onClick={handleSearch}>Найти</Button>
@@ -157,9 +166,11 @@ export default function SearchPage() {
                                                 </p>
                                             </div>
                                         </div>
-                                        <Button variant="outline" size="sm">
-                                            Посмотреть профиль
-                                        </Button>
+                                        <Link to={`/profile/${user.id}`}>
+                                            <Button variant="outline" size="sm">
+                                                Просмотреть профиль
+                                            </Button>
+                                        </Link>
                                     </div>
                                 </Card>
                             ))}

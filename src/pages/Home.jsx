@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
 import Header from '../components/Header'
+import Tabs from '../components/Tabs'
 import CommunityCard from '../components/CommunityCard'
 import PostCard from '../components/PostCard'
 import { mockPosts } from '../data/mockPosts'
@@ -11,7 +12,17 @@ export default function Home() {
     const { user } = useAuth()
     const navigate = useNavigate()
     const [loading, setLoading] = useState(true)
+    const [activeTab, setActiveTab] = useState('all')
     const { posts, setPosts } = usePostsStore()
+
+    const tabs = [
+        { id: 'all', label: 'Все' },
+        { id: 'post', label: 'Публикации' },
+        { id: 'event', label: 'События' },
+        { id: 'vacancy', label: 'Вакансии' },
+        { id: 'internship', label: 'Стажировки' },
+        { id: 'project', label: 'Проекты' }
+    ]
 
     // Моковые данные для демонстрации
     const mockCommunities = [
@@ -70,19 +81,34 @@ export default function Home() {
         return null
     }
 
-    return (
-        <div className="min-h-screen bg-gray-50">
-            <Header />
+    // Фильтруем посты по активной вкладке
+    const filteredPosts = activeTab === 'all' 
+        ? (posts.length > 0 ? posts : mockPosts)
+        : (posts.length > 0 ? posts : mockPosts).filter(post => post.type === activeTab)
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-2 space-y-6">
-                        <h2 className="text-2xl font-bold text-gray-900">Лента</h2>
+        return (
+            <div className="min-h-screen bg-gray-50">
+                <Header />
 
-                        {(posts.length > 0 ? posts : mockPosts).map(post => (
-                            <PostCard key={post.id} post={post} />
-                        ))}
-                    </div>
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div className="lg:col-span-2 space-y-6">
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-2xl font-bold text-gray-900">Лента</h2>
+                            </div>
+                            
+                            <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+
+                            {filteredPosts.length > 0 ? (
+                                filteredPosts.map(post => (
+                                    <PostCard key={post.id} post={post} />
+                                ))
+                            ) : (
+                                <div className="text-center py-12">
+                                    <p className="text-gray-500">Нет публикаций в этой категории</p>
+                                </div>
+                            )}
+                        </div>
 
                     <div className="space-y-6">
                         <div>
