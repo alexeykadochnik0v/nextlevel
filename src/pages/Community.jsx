@@ -538,34 +538,6 @@ export default function Community() {
 
                 <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
-                {isOwner && showAddTab && (
-                    <Card className="mt-4">
-                        <div className="flex gap-2">
-                            <Input
-                                value={newTabName}
-                                onChange={(e) => setNewTabName(e.target.value)}
-                                placeholder="Название вкладки"
-                                onKeyPress={(e) => e.key === 'Enter' && handleAddTab()}
-                            />
-                            <Button onClick={handleAddTab} size="sm">
-                                Добавить
-                            </Button>
-                            <Button onClick={() => setShowAddTab(false)} variant="outline" size="sm">
-                                Отмена
-                            </Button>
-                        </div>
-                    </Card>
-                )}
-
-                {isOwner && !showAddTab && (
-                    <div className="flex justify-end mt-4 px-4">
-                        <Button onClick={() => setShowAddTab(true)} variant="outline" size="sm">
-                            <Plus className="w-4 h-4 mr-2" />
-                            Добавить вкладку
-                        </Button>
-                    </div>
-                )}
-
                 <div className="px-4 sm:px-6 lg:px-8">
                 {activeTab === 'posts' && (
                     <div className="space-y-4 sm:space-y-6 py-4 sm:py-6">

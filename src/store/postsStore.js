@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { doc, updateDoc, increment } from 'firebase/firestore'
+import { doc, getDoc, updateDoc, increment } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 
 const usePostsStore = create(
@@ -44,26 +44,36 @@ const usePostsStore = create(
                     )
                 }))
 
-                // Обновляем в Firebase
+                // Обновляем в Firebase (только если пост существует в Firebase)
                 try {
                     const postRef = doc(db, 'posts', postId)
-                    await updateDoc(postRef, {
-                        likesCount: increment(delta)
-                    })
+                    const postDoc = await getDoc(postRef)
+                    
+                    if (postDoc.exists()) {
+                        await updateDoc(postRef, {
+                            likesCount: increment(delta)
+                        })
+                    }
+                    // Если пост не существует (моковый), просто игнорируем
                 } catch (error) {
                     console.error('Error updating like in Firebase:', error)
-                    // Откатываем изменения при ошибке
-                    set((state) => ({
-                        likedPosts: {
-                            ...state.likedPosts,
-                            [postId]: isLiked
-                        },
-                        posts: state.posts.map(post =>
-                            post.id === postId
-                                ? { ...post, likesCount: (post.likesCount || 0) - delta }
-                                : post
-                        )
-                    }))
+                    // Откатываем изменения при ошибке только для реальных постов
+                    const postRef = doc(db, 'posts', postId)
+                    const postDoc = await getDoc(postRef)
+                    
+                    if (postDoc.exists()) {
+                        set((state) => ({
+                            likedPosts: {
+                                ...state.likedPosts,
+                                [postId]: isLiked
+                            },
+                            posts: state.posts.map(post =>
+                                post.id === postId
+                                    ? { ...post, likesCount: (post.likesCount || 0) - delta }
+                                    : post
+                            )
+                        }))
+                    }
                 }
             },
 

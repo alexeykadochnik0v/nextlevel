@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { Briefcase, MapPin, Clock, DollarSign, Shield, Building, FileText, Send, CheckCircle } from 'lucide-react'
+import { Briefcase, MapPin, Clock, DollarSign, Shield, Building, FileText, Send, CheckCircle, ChevronRight, Home } from 'lucide-react'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuth } from '../hooks/useAuth'
@@ -198,6 +198,34 @@ export default function Vacancy() {
             <Header />
 
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {/* Breadcrumbs */}
+                <nav className="mb-6 overflow-x-auto">
+                    <ol className="flex items-center space-x-2 text-sm whitespace-nowrap">
+                        <li>
+                            <Link to="/" className="text-gray-500 hover:text-indigo-600 flex items-center">
+                                <Home className="w-4 h-4" />
+                            </Link>
+                        </li>
+                        {vacancy.communityId && !vacancy.communityId.startsWith('comm') && (
+                            <>
+                                <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                <li>
+                                    <Link 
+                                        to={`/community/${vacancy.communityId}`}
+                                        className="text-gray-500 hover:text-indigo-600"
+                                    >
+                                        {vacancy.communityName || 'Сообщество'}
+                                    </Link>
+                                </li>
+                            </>
+                        )}
+                        <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <li className="text-gray-900 font-medium truncate max-w-xs">
+                            {vacancy.title}
+                        </li>
+                    </ol>
+                </nav>
+
                 <Card className="mb-6">
                     <div className="mb-6">
                         <div className="flex items-start justify-between mb-4">
@@ -286,10 +314,10 @@ export default function Vacancy() {
 
                 <Card>
                     <div className="text-sm text-gray-500">
-                        <p>Опубликовано: {new Date(vacancy.createdAt).toLocaleDateString('ru-RU')}</p>
+                        <p>Опубликовано: {vacancy.createdAt?.toDate ? vacancy.createdAt.toDate().toLocaleDateString('ru-RU') : new Date(vacancy.createdAt).toLocaleDateString('ru-RU')}</p>
                         {vacancy.validUntil && (
                             <p className="mt-1">
-                                Актуально до: {new Date(vacancy.validUntil).toLocaleDateString('ru-RU')}
+                                Актуально до: {vacancy.validUntil?.toDate ? vacancy.validUntil.toDate().toLocaleDateString('ru-RU') : new Date(vacancy.validUntil).toLocaleDateString('ru-RU')}
                             </p>
                         )}
                     </div>

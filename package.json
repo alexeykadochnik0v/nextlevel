@@ -1,8 +1,18 @@
 {
   "name": "nextlevel",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "license": "UNLICENSED",
+  "author": {
+    "name": "Алексей Кадочников",
+    "email": "По запросу в Telegram",
+    "url": "https://t.me/alexey_kadochnikov"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alexeykadochnik0v/nextlevel"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",

@@ -15,7 +15,7 @@ import useCommentsStore from '../store/commentsStore'
 export default function PostCard({ post, communityOwnerId }) {
     const navigate = useNavigate()
     const { user } = useAuth()
-    const { toggleLike, likedPosts } = usePostsStore()
+    const { toggleLike, likedPosts, posts } = usePostsStore()
     const { comments } = useCommentsStore()
     const [showToast, setShowToast] = useState(false)
     const [toastMessage, setToastMessage] = useState('')
@@ -24,8 +24,11 @@ export default function PostCard({ post, communityOwnerId }) {
     // Проверяем является ли пользователь автором или владельцем сообщества
     const canManage = user && (user.uid === post.authorId || user.uid === communityOwnerId)
 
-    // Получаем количество комментариев для этого поста
-    const commentsCount = comments[post.id]?.length || 0
+    // Получаем актуальные данные поста из store (для синхронизации лайков)
+    const actualPost = posts.find(p => p.id === post.id) || post
+    
+    // Получаем количество комментариев: приоритет у данных из поста, затем из store
+    const commentsCount = actualPost.commentsCount || comments[post.id]?.length || 0
 
     const typeColors = {
         post: 'default',
@@ -51,17 +54,42 @@ export default function PostCard({ post, communityOwnerId }) {
     const handleShare = async (e) => {
         e.stopPropagation()
         const url = `${window.location.origin}/post/${post.id}`
-        try {
-            await navigator.clipboard.writeText(url)
-            setShowToast(true)
-        } catch (err) {
-            console.error('Failed to copy:', err)
+        
+        // Проверяем поддержку Web Share API
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: post.title,
+                    text: post.content?.substring(0, 100) + '...',
+                    url: url
+                })
+            } catch (err) {
+                // Пользователь отменил или ошибка
+                if (err.name !== 'AbortError') {
+                    console.error('Error sharing:', err)
+                    // Fallback к копированию
+                    await navigator.clipboard.writeText(url)
+                    setToastMessage('Ссылка скопирована!')
+                    setShowToast(true)
+                }
+            }
+        } else {
+            // Fallback для браузеров без Web Share API
+            try {
+                await navigator.clipboard.writeText(url)
+                setToastMessage('Ссылка скопирована!')
+                setShowToast(true)
+            } catch (err) {
+                console.error('Failed to copy:', err)
+            }
         }
     }
 
     const handleCardClick = () => {
-        // Для вакансий идем на страницу /vacancy, для остального на /post
-        if (post.type === 'vacancy' || post.type === 'internship') {
+        // Для реальных вакансий (из коллекции jobs) идем на /vacancy
+        // Проверяем наличие специфичных полей вакансии
+        if ((post.type === 'vacancy' || post.type === 'internship') && 
+            (post.terms || post.employmentType || post.validUntil !== undefined)) {
             navigate(`/vacancy/${post.id}`)
         } else {
             navigate(`/post/${post.id}`)
@@ -97,6 +125,7 @@ export default function PostCard({ post, communityOwnerId }) {
                         <img 
                             src={post.community.logoUrl} 
                             alt={post.community.name}
+                            loading="lazy"
                             className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
                         />
                     ) : (
@@ -142,7 +171,9 @@ export default function PostCard({ post, communityOwnerId }) {
                                 {typeLabels[post.type]}
                             </Badge>
                             <span className="text-sm text-gray-500">
-                                {new Date(post.createdAt).toLocaleDateString('ru-RU')}
+                                {post.createdAt?.toDate 
+                                    ? post.createdAt.toDate().toLocaleDateString('ru-RU')
+                                    : new Date(post.createdAt).toLocaleDateString('ru-RU')}
                             </span>
                         </div>
                     </div>
@@ -155,13 +186,16 @@ export default function PostCard({ post, communityOwnerId }) {
                 </Link>
 
                 <p className="text-gray-600 mb-4 line-clamp-3">
-                    {post.content}
+                    {(post.type === 'vacancy' || post.type === 'internship') && post.description 
+                        ? post.description.substring(0, 150) + (post.description.length > 150 ? '...' : '')
+                        : post.content}
                 </p>
 
                 {(post.image || post.imageUrl) && (
                     <img
                         src={post.image || post.imageUrl}
                         alt={post.title}
+                        loading="lazy"
                         className="w-full h-48 object-cover rounded-lg mb-4"
                     />
                 )}
@@ -174,7 +208,7 @@ export default function PostCard({ post, communityOwnerId }) {
                                 }`}
                         >
                             <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
-                            <span className="text-sm">{post.likesCount || 0}</span>
+                            <span className="text-sm">{actualPost.likesCount || 0}</span>
                         </button>
                         <div className="flex items-center space-x-2 text-gray-500">
                             <MessageCircle className="w-5 h-5" />

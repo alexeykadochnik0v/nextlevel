@@ -6,13 +6,6 @@ const updateCommentsCount = (post) => ({
     commentsCount: countComments(mockComments[post.id] || [])
 })
 
-// Маппинг старых ID на новые
-const communityIdMap = {
-    '1': 'comm1',
-    '2': 'comm2',
-    '3': 'comm3'
-}
-
 const rawPosts = [
     {
         id: '1',
@@ -189,6 +182,6 @@ const rawPosts = [
 // Добавляем communityId для совместимости с новой структурой
 export const mockPosts = rawPosts.map(post => ({
     ...updateCommentsCount(post),
-    communityId: communityIdMap[post.community?.id] || post.community?.id
+    communityId: post.community?.id
 }))
 

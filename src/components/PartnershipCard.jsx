@@ -30,14 +30,16 @@ export default function PartnershipCard({ partnership, communityOwnerId }) {
 
     const formatDate = (dateString) => {
         if (!dateString) return null
-        return new Date(dateString).toLocaleDateString('ru-RU', {
+        // Поддержка Firestore Timestamp
+        const date = dateString?.toDate ? dateString.toDate() : new Date(dateString)
+        return date.toLocaleDateString('ru-RU', {
             day: '2-digit',
             month: '2-digit',
             year: 'numeric'
         })
     }
 
-    const isExpired = partnership.expiryDate && new Date(partnership.expiryDate) < new Date()
+    const isExpired = partnership.expiryDate && (partnership.expiryDate?.toDate ? partnership.expiryDate.toDate() : new Date(partnership.expiryDate)) < new Date()
     const isClosed = partnership.status === 'closed' || isExpired
 
     const handleDelete = async (e) => {
@@ -59,7 +61,7 @@ export default function PartnershipCard({ partnership, communityOwnerId }) {
 
     return (
         <>
-        <Link to={`/partnership/${partnership.id}`}>
+        <Link to={`/partnership/${partnership.id}`} className="block">
             <Card className="hover:shadow-lg transition-shadow cursor-pointer">
                 <div className="flex flex-col sm:flex-row items-start gap-4">
                     <div className="flex items-start space-x-3 flex-1 min-w-0">
@@ -68,6 +70,7 @@ export default function PartnershipCard({ partnership, communityOwnerId }) {
                             <img 
                                 src={partnership.community.logoUrl} 
                                 alt={partnership.communityName}
+                                loading="lazy"
                                 className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg object-cover flex-shrink-0"
                             />
                         ) : (

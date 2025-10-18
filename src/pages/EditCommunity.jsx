@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Upload, ArrowLeft, Building, GraduationCap } from 'lucide-react'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
-import { doc, getDoc, updateDoc } from 'firebase/firestore'
+import { doc, getDoc, updateDoc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore'
 import { storage, db } from '../lib/firebase'
 import { useAuth } from '../hooks/useAuth'
 import Header from '../components/Header'
@@ -178,6 +178,35 @@ export default function EditCommunity() {
             }
 
             await updateDoc(doc(db, 'communities', id), updateData)
+
+            // Если изменилось название, обновляем его во всех постах
+            if (community.title !== formData.title.trim()) {
+                try {
+                    // Находим все посты этого сообщества
+                    const postsQuery = query(
+                        collection(db, 'posts'),
+                        where('communityId', '==', id)
+                    )
+                    const postsSnapshot = await getDocs(postsQuery)
+                    
+                    if (!postsSnapshot.empty) {
+                        const batch = writeBatch(db)
+                        
+                        postsSnapshot.forEach((postDoc) => {
+                            const postRef = doc(db, 'posts', postDoc.id)
+                            batch.update(postRef, {
+                                'community.name': formData.title.trim(),
+                                communityName: formData.title.trim()
+                            })
+                        })
+                        
+                        await batch.commit()
+                    }
+                } catch (error) {
+                    console.error('Error updating posts:', error)
+                    // Не показываем ошибку пользователю, т.к. сообщество уже обновлено
+                }
+            }
 
             setToastMessage('Сообщество успешно обновлено!')
             setShowToast(true)

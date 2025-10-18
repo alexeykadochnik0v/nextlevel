@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { Heart, MessageCircle, Share2, ArrowLeft, Trash2, Shield } from 'lucide-react'
+import { Heart, MessageCircle, Share2, ArrowLeft, Trash2, Shield, ChevronRight, Home } from 'lucide-react'
 import { doc, getDoc, deleteDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import Header from '../components/Header'
@@ -73,7 +73,7 @@ export default function Post() {
 
         loadPost()
         loadComments(id)
-    }, [id, loadComments, posts])
+    }, [id]) // Убрал loadComments и posts из зависимостей
 
     const handleLike = () => {
         toggleLike(post.id)
@@ -81,11 +81,36 @@ export default function Post() {
 
     const handleShare = async () => {
         const url = `${window.location.origin}/post/${post.id}`
-        try {
-            await navigator.clipboard.writeText(url)
-            setShowToast(true)
-        } catch (err) {
-            console.error('Failed to copy:', err)
+        
+        // Проверяем поддержку Web Share API
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: post.title,
+                    text: post.content?.substring(0, 100) + '...',
+                    url: url
+                })
+            } catch (err) {
+                // Пользователь отменил или ошибка
+                if (err.name !== 'AbortError') {
+                    console.error('Error sharing:', err)
+                    // Fallback к копированию
+                    await navigator.clipboard.writeText(url)
+                    setToastMessage('Ссылка скопирована!')
+                    setShowToast(true)
+                }
+            }
+        } else {
+            // Fallback для браузеров без Web Share API
+            try {
+                await navigator.clipboard.writeText(url)
+                setToastMessage('Ссылка скопирована!')
+                setShowToast(true)
+            } catch (err) {
+                console.error('Failed to copy:', err)
+                setToastMessage('Не удалось скопировать ссылку')
+                setShowToast(true)
+            }
         }
     }
 
@@ -193,13 +218,33 @@ export default function Post() {
             <Header />
 
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <Link
-                    to={post.communityId ? `/community/${post.communityId}` : "/"}
-                    className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6"
-                >
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    {post.communityId ? 'Назад к сообществу' : 'Назад к ленте'}
-                </Link>
+                {/* Breadcrumbs */}
+                <nav className="mb-6 overflow-x-auto">
+                    <ol className="flex items-center space-x-2 text-sm whitespace-nowrap">
+                        <li>
+                            <Link to="/" className="text-gray-500 hover:text-indigo-600 flex items-center">
+                                <Home className="w-4 h-4" />
+                            </Link>
+                        </li>
+                        {(post.community?.id || post.communityId) && !(post.community?.id || post.communityId).startsWith('comm') && (
+                            <>
+                                <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                <li>
+                                    <Link 
+                                        to={`/community/${post.community?.id || post.communityId}`}
+                                        className="text-gray-500 hover:text-indigo-600"
+                                    >
+                                        {post.community?.name || post.communityName || 'Сообщество'}
+                                    </Link>
+                                </li>
+                            </>
+                        )}
+                        <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <li className="text-gray-900 font-medium truncate max-w-xs">
+                            {post.title}
+                        </li>
+                    </ol>
+                </nav>
 
                 <Card className="mb-6">
                     <div className="flex items-start space-x-3 mb-4">
@@ -241,7 +286,9 @@ export default function Post() {
                                         {typeLabels[post.type]}
                                     </Badge>
                                     <span className="text-sm text-gray-500">
-                                        {new Date(post.createdAt).toLocaleDateString('ru-RU')}
+                                        {post.createdAt?.toDate 
+                                            ? post.createdAt.toDate().toLocaleDateString('ru-RU')
+                                            : new Date(post.createdAt).toLocaleDateString('ru-RU')}
                                     </span>
                                 </div>
                                 {isOwner && (

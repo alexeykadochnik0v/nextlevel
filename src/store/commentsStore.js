@@ -1,8 +1,9 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc } from 'firebase/firestore'
+import { collection, addDoc, getDocs, getDoc, query, where, doc, updateDoc, deleteDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { mockComments } from '../data/mockComments'
+import usePostsStore from './postsStore'
 
 const useCommentsStore = create(
     persist(
@@ -40,8 +41,12 @@ const useCommentsStore = create(
                         comments: {
                             ...state.comments,
                             [postId]: comments
-                        }
+                        },
+                        loading: false
                     }))
+
+                    // Обновляем счетчик комментариев в postsStore
+                    usePostsStore.getState().updateCommentsCount(postId, comments.length)
                 } catch (error) {
                     console.error('Error loading comments:', error)
                     // В случае ошибки, используем моковые данные
@@ -50,11 +55,14 @@ const useCommentsStore = create(
                             comments: {
                                 ...state.comments,
                                 [postId]: mockComments[postId]
-                            }
+                            },
+                            loading: false
                         }))
+                        // Обновляем счетчик комментариев в postsStore
+                        usePostsStore.getState().updateCommentsCount(postId, mockComments[postId].length)
+                    } else {
+                        set({ loading: false })
                     }
-                } finally {
-                    set({ loading: false })
                 }
             },
 
@@ -87,6 +95,10 @@ const useCommentsStore = create(
                         }
                     }))
 
+                    // Обновляем счетчик комментариев в postsStore
+                    const currentComments = get().comments[postId] || []
+                    usePostsStore.getState().updateCommentsCount(postId, currentComments.length)
+
                     return newComment
                 } catch (error) {
                     console.error('Error adding comment:', error)
@@ -105,6 +117,10 @@ const useCommentsStore = create(
                             [postId]: (state.comments[postId] || []).filter(comment => comment.id !== commentId)
                         }
                     }))
+
+                    // Обновляем счетчик комментариев в postsStore
+                    const currentComments = get().comments[postId] || []
+                    usePostsStore.getState().updateCommentsCount(postId, currentComments.length)
                 } catch (error) {
                     console.error('Error deleting comment:', error)
                     throw error
@@ -177,6 +193,36 @@ const useCommentsStore = create(
                         return !isLiked
                     } else {
                         // Для реальных комментариев работаем с Firebase
+                        // Проверяем существование комментария в Firebase
+                        const commentRef = doc(db, 'comments', commentId)
+                        const commentDoc = await getDoc(commentRef)
+                        
+                        if (!commentDoc.exists()) {
+                            // Комментарий не существует в Firebase, работаем локально
+                            const isLiked = comment.likes && comment.likes.includes(userId)
+
+                            set((state) => ({
+                                comments: {
+                                    ...state.comments,
+                                    [postId]: state.comments[postId]?.map(comment =>
+                                        comment.id === commentId
+                                            ? {
+                                                ...comment,
+                                                likes: isLiked
+                                                    ? (comment.likes || []).filter(id => id !== userId)
+                                                    : [...(comment.likes || []), userId],
+                                                likesCount: isLiked
+                                                    ? Math.max(0, comment.likesCount - 1)
+                                                    : comment.likesCount + 1
+                                            }
+                                            : comment
+                                    ) || []
+                                }
+                            }))
+
+                            return !isLiked
+                        }
+                        
                         const likesRef = collection(db, 'commentLikes')
                         const q = query(
                             likesRef,
@@ -191,7 +237,6 @@ const useCommentsStore = create(
                             await deleteDoc(likeDoc.ref)
 
                             // Обновляем счетчик лайков
-                            const commentRef = doc(db, 'comments', commentId)
                             await updateDoc(commentRef, {
                                 likesCount: Math.max(0, comment.likesCount - 1)
                             })
@@ -224,7 +269,6 @@ const useCommentsStore = create(
                             await addDoc(likesRef, likeData)
 
                             // Обновляем счетчик лайков
-                            const commentRef = doc(db, 'comments', commentId)
                             await updateDoc(commentRef, {
                                 likesCount: comment.likesCount + 1
                             })
