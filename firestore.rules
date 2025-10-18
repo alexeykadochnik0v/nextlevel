@@ -1,0 +1,277 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isVerifiedStudent() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('verification', {}).get('student', {}).get('status', '') == 'approved';
+    }
+    
+    function isVerifiedEmployer() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('verification', {}).get('employer', {}).get('status', '') == 'approved';
+    }
+    
+    function isVerified() {
+      return isVerifiedStudent() || isVerifiedEmployer();
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      // Anyone can read user profiles
+      allow read: if true;
+      
+      // Users can create their own profile
+      allow create: if isOwner(userId);
+      
+      // Users can update their own profile, admins can update any profile
+      allow update: if isOwner(userId) || isAdmin();
+      
+      // Only admins can delete users
+      allow delete: if isAdmin();
+    }
+    
+    // Verification queue
+    match /verificationsQueue/{requestId} {
+      // Only the owner can read their own verification request
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      
+      // Users can create verification requests for themselves
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      
+      // Only admins can update or delete verification requests
+      allow update, delete: if isAdmin();
+    }
+    
+    // Communities collection
+    match /communities/{communityId} {
+      // Anyone can read communities (including pending/rejected for their owners)
+      allow read: if true;
+      
+      // Verified users can create communities (все создаются сразу активными)
+      allow create: if isAuthenticated() && 
+                       (isVerified() || isAdmin()) &&
+                       request.resource.data.ownerUid == request.auth.uid &&
+                       request.resource.data.status == 'active';
+      
+      // Owners can update their communities (except status and publishBan)
+      // Admins can update any community including status
+      allow update: if (isOwner(resource.data.ownerUid) && 
+                        request.resource.data.status == resource.data.status &&
+                        request.resource.data.publishBan == resource.data.publishBan) ||
+                       isAdmin();
+      
+      // Only admins can delete communities
+      allow delete: if isAdmin();
+    }
+    
+    // Posts collection
+    match /posts/{postId} {
+      // Anyone can read posts
+      allow read: if true;
+      
+      // Authenticated users can create posts
+      allow create: if isAuthenticated() && 
+                       request.resource.data.authorId == request.auth.uid;
+      
+      // Authors can update their own posts, admins can update any post
+      allow update: if isOwner(resource.data.authorId) || isAdmin();
+      
+      // Authors and admins can delete posts
+      allow delete: if isOwner(resource.data.authorId) || isAdmin();
+    }
+    
+    // Vacancies collection (legacy name)
+    match /vacancies/{vacancyId} {
+      // Anyone can read vacancies
+      allow read: if true;
+      
+      // Authenticated users can create vacancies
+      allow create: if isAuthenticated() && 
+                       request.resource.data.authorId == request.auth.uid;
+      
+      // Authors can update their own vacancies, admins can update any vacancy
+      allow update: if isOwner(resource.data.authorId) || isAdmin();
+      
+      // Authors and admins can delete vacancies
+      allow delete: if isOwner(resource.data.authorId) || isAdmin();
+    }
+    
+    // Jobs collection (вакансии)
+    match /jobs/{jobId} {
+      // Anyone can read jobs
+      allow read: if true;
+      
+      // Authenticated users can create jobs
+      allow create: if isAuthenticated() && 
+                       request.resource.data.authorId == request.auth.uid;
+      
+      // Authors can update their own jobs, admins can update any job
+      allow update: if isOwner(resource.data.authorId) || isAdmin();
+      
+      // Authors and admins can delete jobs
+      allow delete: if isOwner(resource.data.authorId) || isAdmin();
+    }
+    
+    // Comments collection
+    match /comments/{commentId} {
+      // Anyone can read comments
+      allow read: if true;
+      
+      // Authenticated users can create comments
+      allow create: if isAuthenticated() && 
+                       request.resource.data.authorId == request.auth.uid;
+      
+      // Authors can update their own comments, admins can update any comment
+      allow update: if isOwner(resource.data.authorId) || isAdmin();
+      
+      // Authors and admins can delete comments
+      allow delete: if isOwner(resource.data.authorId) || isAdmin();
+    }
+    
+    // Notifications collection
+    match /notifications/{notificationId} {
+      // Users can only read their own notifications
+      allow read: if isOwner(resource.data.userId) || isAdmin();
+      
+      // System and admins can create notifications
+      allow create: if isAdmin();
+      
+      // Users can update their own notifications (mark as read), admins can update any
+      allow update: if isOwner(resource.data.userId) || isAdmin();
+      
+      // Users can delete their own notifications, admins can delete any
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
+    }
+    
+    // Job applications collection
+    match /jobApplications/{applicationId} {
+      // Applicants and job owners can read applications
+      allow read: if isOwner(resource.data.applicantId) || 
+                     isOwner(resource.data.jobOwnerId) || 
+                     isAdmin();
+      
+      // Authenticated users can create applications
+      allow create: if isAuthenticated() && 
+                       request.resource.data.applicantId == request.auth.uid;
+      
+      // Job owners can update application status
+      allow update: if isOwner(resource.data.jobOwnerId) || isAdmin();
+      
+      // Applicants and admins can delete applications
+      allow delete: if isOwner(resource.data.applicantId) || isAdmin();
+    }
+    
+    // Partnership offers collection (старая коллекция)
+    match /partnershipOffers/{offerId} {
+      // Offer creators and recipients can read offers
+      allow read: if isOwner(resource.data.senderId) || 
+                     isOwner(resource.data.recipientId) || 
+                     isAdmin();
+      
+      // Authenticated users can create offers
+      allow create: if isAuthenticated() && 
+                       request.resource.data.senderId == request.auth.uid;
+      
+      // Recipients can update offer status
+      allow update: if isOwner(resource.data.recipientId) || isAdmin();
+      
+      // Senders and admins can delete offers
+      allow delete: if isOwner(resource.data.senderId) || isAdmin();
+    }
+    
+    // Partnerships collection (новая коллекция для предложений о сотрудничестве)
+    match /partnerships/{partnershipId} {
+      // Все могут читать открытые предложения о сотрудничестве
+      allow read: if true;
+      
+      // Владельцы сообществ могут создавать предложения
+      allow create: if isAuthenticated() && 
+                       request.resource.data.authorId == request.auth.uid;
+      
+      // Авторы могут обновлять свои предложения
+      allow update: if isOwner(resource.data.authorId) || isAdmin();
+      
+      // Авторы и админы могут удалять предложения
+      allow delete: if isOwner(resource.data.authorId) || isAdmin();
+    }
+    
+    // Partnership applications (отклики на сотрудничество)
+    match /partnershipApplications/{applicationId} {
+      // Авторы оффера и заявители могут читать
+      allow read: if isOwner(resource.data.applicantUserId) || 
+                     isOwner(resource.data.offerAuthorId) || 
+                     isAdmin();
+      
+      // Аутентифицированные пользователи могут откликаться
+      allow create: if isAuthenticated() && 
+                       request.resource.data.applicantUserId == request.auth.uid;
+      
+      // Авторы оффера могут обновлять статус
+      allow update: if isOwner(resource.data.offerAuthorId) || isAdmin();
+      
+      // Заявители могут удалять свои отклики
+      allow delete: if isOwner(resource.data.applicantUserId) || isAdmin();
+    }
+    
+    // Chats collection
+    match /chats/{chatId} {
+      // Participants can read their chats
+      allow read: if isAuthenticated() && 
+                     request.auth.uid in resource.data.participants;
+      
+      // Participants can create chats
+      allow create: if isAuthenticated() && 
+                       request.auth.uid in request.resource.data.participants;
+      
+      // Participants can update chats
+      allow update: if isAuthenticated() && 
+                       request.auth.uid in resource.data.participants;
+      
+      // Participants and admins can delete chats
+      allow delete: if (isAuthenticated() && 
+                        request.auth.uid in resource.data.participants) || 
+                       isAdmin();
+      
+      // Messages subcollection
+      match /messages/{messageId} {
+        // Participants can read messages
+        allow read: if isAuthenticated() && 
+                       request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+        
+        // Participants can create messages
+        allow create: if isAuthenticated() && 
+                         request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants &&
+                         request.resource.data.senderId == request.auth.uid;
+        
+        // Message authors can update their messages
+        allow update: if isOwner(resource.data.senderId);
+        
+        // Message authors and admins can delete messages
+        allow delete: if isOwner(resource.data.senderId) || isAdmin();
+      }
+    }
+    
+    // Default deny all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+

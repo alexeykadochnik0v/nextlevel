@@ -10,15 +10,22 @@ import {
 import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { auth, db } from '../lib/firebase'
 import useAuthStore from '../store/authStore'
+import useVerificationStore from '../store/verificationStore'
 
 export function useAuth() {
-    const { user, setUser, logout } = useAuthStore()
+    const { user, setUser, logout, updateProfile: updateAuthStore } = useAuthStore()
+    const { setVerification } = useVerificationStore()
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
                 const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid))
                 const userData = userDoc.exists() ? userDoc.data() : {}
+
+                // Загружаем данные верификации из Firestore
+                if (userData.verification) {
+                    setVerification(userData.verification)
+                }
 
                 setUser({
                     uid: firebaseUser.uid,
@@ -33,7 +40,7 @@ export function useAuth() {
         })
 
         return unsubscribe
-    }, [setUser])
+    }, [setUser, setVerification])
 
     const login = async (email, password) => {
         const result = await signInWithEmailAndPassword(auth, email, password)
@@ -49,6 +56,7 @@ export function useAuth() {
 
         await setDoc(doc(db, 'users', result.user.uid), {
             ...userData,
+            email: email, // Добавляем email в Firestore
             createdAt: new Date().toISOString(),
             level: 1,
             points: 0
@@ -66,12 +74,21 @@ export function useAuth() {
         logout()
     }
 
+    const updateAvatar = async (photoURL) => {
+        await updateProfile(auth.currentUser, {
+            photoURL: photoURL
+        })
+        // Обновляем локальное состояние в Zustand store
+        updateAuthStore({ photoURL })
+    }
+
     return {
         user,
         login,
         register,
         resetPassword,
-        logout: logoutUser
+        logout: logoutUser,
+        updateAvatar
     }
 }
 

@@ -95,7 +95,7 @@ export default function Chat() {
         if (chatMessages.length === 0) {
             setMessages(id, initialMockMessages)
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id])
 
     const scrollToBottom = () => {
@@ -119,7 +119,7 @@ export default function Chat() {
                 createdAt: new Date().toISOString(),
                 attachments: []
             }
-            
+
             addMessage(id, newMessage)
             setMessageText('')
         }

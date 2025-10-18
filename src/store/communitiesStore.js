@@ -1,26 +1,42 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
-const useCommunitiesStore = create((set) => ({
-    communities: [],
-    myCommunities: [],
-    loading: false,
+const useCommunitiesStore = create(
+    persist(
+        (set, get) => ({
+            // Присоединенные сообщества пользователя
+            joinedCommunities: [],
 
-    setCommunities: (communities) => set({ communities }),
+            // Присоединиться к сообществу
+            joinCommunity: (communityId) => {
+                const { joinedCommunities } = get()
+                if (!joinedCommunities.includes(communityId)) {
+                    set({
+                        joinedCommunities: [...joinedCommunities, communityId]
+                    })
+                    return true
+                }
+                return false
+            },
 
-    setMyCommunities: (myCommunities) => set({ myCommunities }),
+            // Покинуть сообщество
+            leaveCommunity: (communityId) => {
+                const { joinedCommunities } = get()
+                set({
+                    joinedCommunities: joinedCommunities.filter(id => id !== communityId)
+                })
+            },
 
-    addCommunity: (community) => set((state) => ({
-        communities: [...state.communities, community]
-    })),
-
-    joinCommunity: (communityId) => set((state) => ({
-        myCommunities: [...state.myCommunities, communityId]
-    })),
-
-    leaveCommunity: (communityId) => set((state) => ({
-        myCommunities: state.myCommunities.filter(id => id !== communityId)
-    }))
-}))
+            // Проверить, присоединен ли к сообществу
+            isJoined: (communityId) => {
+                const { joinedCommunities } = get()
+                return joinedCommunities.includes(communityId)
+            }
+        }),
+        {
+            name: 'communities-storage'
+        }
+    )
+)
 
 export default useCommunitiesStore
-

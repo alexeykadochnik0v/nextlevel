@@ -16,6 +16,7 @@ export default function Register() {
     })
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
+    const [agreeToTerms, setAgreeToTerms] = useState(false)
 
     const { register } = useAuth()
     const navigate = useNavigate()
@@ -30,6 +31,11 @@ export default function Register() {
     const handleSubmit = async (e) => {
         e.preventDefault()
         setError('')
+
+        if (!agreeToTerms) {
+            setError('Необходимо согласиться с пользовательским соглашением')
+            return
+        }
 
         if (formData.password !== formData.confirmPassword) {
             setError('Пароли не совпадают')
@@ -60,6 +66,9 @@ export default function Register() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center p-4">
             <Card className="w-full max-w-md">
+                <div className="flex justify-center mb-6">
+                    <img src="/images/logo.svg" alt="NextLevel" className="w-16 h-16" />
+                </div>
                 <h1 className="text-3xl font-bold text-gray-800 mb-2 text-center">
                     Регистрация
                 </h1>
@@ -132,6 +141,26 @@ export default function Register() {
                         required
                     />
 
+                    <div className="flex items-start space-x-3">
+                        <input
+                            type="checkbox"
+                            id="agreeToTerms"
+                            checked={agreeToTerms}
+                            onChange={(e) => setAgreeToTerms(e.target.checked)}
+                            className="mt-1 w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                        />
+                        <label htmlFor="agreeToTerms" className="text-sm text-gray-700">
+                            Я соглашаюсь с{' '}
+                            <Link
+                                to="/terms"
+                                target="_blank"
+                                className="text-indigo-600 hover:text-indigo-700 underline"
+                            >
+                                пользовательским соглашением
+                            </Link>
+                        </label>
+                    </div>
+
                     {error && (
                         <p className="text-sm text-red-600 text-center">{error}</p>
                     )}
@@ -139,7 +168,7 @@ export default function Register() {
                     <Button
                         type="submit"
                         className="w-full"
-                        disabled={loading}
+                        disabled={loading || !agreeToTerms}
                     >
                         {loading ? 'Регистрация...' : 'Зарегистрироваться'}
                     </Button>

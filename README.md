@@ -1,6 +1,7 @@
 # NextLevel - Платформа для молодежных сообществ и клубов предприятий
 
 ![React](https://img.shields.io/badge/React-19.1.1-blue.svg)
+
 ![Vite](https://img.shields.io/badge/Vite-7.1.7-646CFF.svg)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4.17-38B2AC.svg)
 ![Firebase](https://img.shields.io/badge/Firebase-Integrated-FFA611.svg)

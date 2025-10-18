@@ -32,6 +32,9 @@ export default function Login() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center p-4">
             <Card className="w-full max-w-md">
+                <div className="flex justify-center mb-6">
+                    <img src="/images/logo.svg" alt="NextLevel" className="w-16 h-16" />
+                </div>
                 <h1 className="text-3xl font-bold text-gray-800 mb-2 text-center">
                     Вход
                 </h1>

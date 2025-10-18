@@ -4,18 +4,27 @@ import Card from './ui/Card'
 import Button from './ui/Button'
 import Badge from './ui/Badge'
 
-export default function CommunityCard({ community, joined = false }) {
+export default function CommunityCard({ community, joined = false, onJoin }) {
+    const name = community.name || community.title
     return (
         <Card className="hover:shadow-xl transition-all">
             <div className="flex items-start justify-between mb-4">
                 <div className="flex items-start space-x-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">
-                        {community.name?.charAt(0)}
-                    </div>
+                    {community.logoUrl ? (
+                        <img 
+                            src={community.logoUrl} 
+                            alt={name}
+                            className="w-12 h-12 rounded-lg object-cover"
+                        />
+                    ) : (
+                        <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">
+                            {name?.charAt(0)}
+                        </div>
+                    )}
                     <div>
                         <Link to={`/community/${community.id}`}>
                             <h3 className="text-lg font-semibold text-gray-900 hover:text-indigo-600">
-                                {community.name}
+                                {name}
                             </h3>
                         </Link>
                         <div className="flex items-center text-sm text-gray-500 mt-1">
@@ -43,7 +52,7 @@ export default function CommunityCard({ community, joined = false }) {
                     </Button>
                 </Link>
             ) : (
-                <Button size="sm" className="w-full">
+                <Button size="sm" className="w-full" onClick={() => onJoin && onJoin(community.id)}>
                     Присоединиться
                 </Button>
             )}

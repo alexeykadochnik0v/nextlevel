@@ -12,6 +12,7 @@ export default function Button({
         primary: 'bg-indigo-600 hover:bg-indigo-700 text-white',
         secondary: 'bg-gray-200 hover:bg-gray-300 text-gray-800',
         outline: 'border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-50',
+        success: 'bg-green-600 hover:bg-green-700 text-white',
         danger: 'bg-red-600 hover:bg-red-700 text-white',
         ghost: 'hover:bg-gray-100 text-gray-700'
     }
@@ -25,7 +26,7 @@ export default function Button({
     return (
         <button
             className={cn(
-                'rounded-lg font-medium transition-all duration-200',
+                'inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200',
                 'disabled:opacity-50 disabled:cursor-not-allowed',
                 variants[variant],
                 sizes[size],

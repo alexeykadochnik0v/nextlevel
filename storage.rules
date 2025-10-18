@@ -1,0 +1,64 @@
+rules_version = '2';
+
+// Craft rules based on data in your Firestore database
+// allow write: if firestore.get(
+//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Правила для аватаров пользователей
+    match /avatars/{userId}/{allPaths=**} {
+      // Позволяем читать всем
+      allow read: if true;
+      // Позволяем писать только авторизованным пользователям в свою папку
+      allow write: if request.auth != null && request.auth.uid == userId;
+      // Позволяем удалять только авторизованным пользователям свои файлы
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Правила для документов верификации
+    match /verification/{userId}/{allPaths=**} {
+      // Позволяем читать только авторизованным пользователям
+      allow read: if request.auth != null;
+      // Позволяем писать только авторизованным пользователям в свою папку
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Правила для изображений постов
+    match /posts/{userId}/{allPaths=**} {
+      // Позволяем читать всем
+      allow read: if true;
+      // Позволяем писать только авторизованным пользователям в свою папку
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Правила для изображений сообществ
+    match /communities/{userId}/{allPaths=**} {
+      // Позволяем читать всем
+      allow read: if true;
+      // Позволяем писать только верифицированным пользователям в свою папку
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Правила для изображений предложений о сотрудничестве
+    match /partnerships/{userId}/{allPaths=**} {
+      // Позволяем читать всем
+      allow read: if true;
+      // Позволяем писать только авторизованным пользователям в свою папку
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Правила для изображений вакансий
+    match /vacancies/{userId}/{allPaths=**} {
+      // Позволяем читать всем
+      allow read: if true;
+      // Позволяем писать только авторизованным пользователям в свою папку
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Блокируем доступ ко всем остальным файлам
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
+

@@ -6,7 +6,14 @@ const updateCommentsCount = (post) => ({
     commentsCount: countComments(mockComments[post.id] || [])
 })
 
-export const mockPosts = [
+// Маппинг старых ID на новые
+const communityIdMap = {
+    '1': 'comm1',
+    '2': 'comm2',
+    '3': 'comm3'
+}
+
+const rawPosts = [
     {
         id: '1',
         type: 'post',
@@ -24,6 +31,7 @@ export const mockPosts = [
             displayName: 'Александр Кузнецов',
             photoURL: null
         },
+        authorVerified: true,
         community: {
             id: '1',
             name: 'IT & Tech'
@@ -54,6 +62,7 @@ export const mockPosts = [
             displayName: 'Организаторы Открой#Моспром',
             photoURL: null
         },
+        authorVerified: true,
         community: {
             id: '1',
             name: 'IT & Tech'
@@ -94,6 +103,7 @@ export const mockPosts = [
             displayName: 'ПромТех Групп',
             photoURL: null
         },
+        authorVerified: true,
         community: {
             id: '2',
             name: 'Машиностроение'
@@ -136,6 +146,7 @@ export const mockPosts = [
             displayName: 'Яндекс',
             photoURL: null
         },
+        authorVerified: true,
         community: {
             id: '1',
             name: 'IT & Tech'
@@ -164,6 +175,7 @@ export const mockPosts = [
             displayName: 'АО «Микрон»',
             photoURL: null
         },
+        authorVerified: true,
         community: {
             id: '1',
             name: 'IT & Tech'
@@ -172,5 +184,11 @@ export const mockPosts = [
         likesCount: 178,
         image: '/images/posts/5.jpg'
     }
-].map(updateCommentsCount)
+]
+
+// Добавляем communityId для совместимости с новой структурой
+export const mockPosts = rawPosts.map(post => ({
+    ...updateCommentsCount(post),
+    communityId: communityIdMap[post.community?.id] || post.community?.id
+}))
 

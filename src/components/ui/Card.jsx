@@ -4,7 +4,7 @@ export default function Card({ children, className, ...props }) {
     return (
         <div
             className={cn(
-                'bg-white rounded-xl shadow-md p-6',
+                'bg-white rounded-xl shadow-md p-4 sm:p-6',
                 'transition-shadow duration-200',
                 'hover:shadow-lg',
                 className
